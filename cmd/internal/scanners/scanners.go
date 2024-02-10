@@ -3,50 +3,45 @@ package scanners
 import (
 	"fmt"
 	"net"
-	"sort"
+	"sync"
 	"time"
 )
 
-func Scan(minPort uint16, maxPort uint16, host string, workers int) []uint16 {
+func Scan(minPort uint16, maxPort uint16, host string, workers int) <-chan uint16 {
 
 	requests := make(chan uint16, workers)
 	results := make(chan uint16)
-	var openPorts []uint16
+	var wg sync.WaitGroup
 
 	for i := 0; i < workers; i++ {
-		go worker(host, requests, results)
+		wg.Add(1)
+		work(&wg, host, requests, results)
 	}
 
 	go func() {
 		for i := minPort; i <= maxPort; i++ {
 			requests <- i
 		}
+		close(requests)
+		wg.Wait()
+		close(results)
 	}()
 
-	for i := uint16(minPort); i <= maxPort; i++ {
-		port := <-results
-		if port != 0 {
-			openPorts = append(openPorts, port)
-		}
-	}
-
-	close(requests)
-	close(results)
-	sort.Slice(openPorts, func(i, j int) bool {
-		return openPorts[i] < openPorts[j]
-	})
-	return openPorts
+	return results
 }
 
-func worker(host string, ports <-chan uint16, results chan<- uint16) {
-	for port := range ports {
-		address := fmt.Sprintf("%s:%d", host, port)
-		conn, err := net.DialTimeout("tcp", address, time.Second*3)
-		if err != nil {
-			results <- 0
-			continue
+func work(wg *sync.WaitGroup, host string, ports <-chan uint16, results chan<- uint16) {
+	go func() {
+		defer wg.Done()
+		for port := range ports {
+			address := fmt.Sprintf("%s:%d", host, port)
+			conn, err := net.DialTimeout("tcp", address, time.Second*3)
+			if err != nil {
+				results <- 0
+				continue
+			}
+			conn.Close()
+			results <- port
 		}
-		conn.Close()
-		results <- port
-	}
+	}()
 }
