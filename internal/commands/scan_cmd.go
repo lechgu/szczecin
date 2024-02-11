@@ -34,7 +34,13 @@ func scan(cmd *cobra.Command, args []string) error {
 }
 
 func scanOne(target string) error {
-	results := scanners.Scan(minPort, maxPort, target, workers, time.Second*time.Duration(timeout))
+	var ports []uint16
+
+	for port := minPort; port <= maxPort; port++ {
+		ports = append(ports, port)
+	}
+
+	results := scanners.Scan(ports, target, workers, time.Second*time.Duration(timeout))
 	var bar *progressbar.ProgressBar
 	if progress {
 		bar = progressbar.Default(int64(maxPort - minPort + 1))

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func Scan(minPort uint16, maxPort uint16, host string, workers int, timeout time.Duration) <-chan string {
+func Scan(ports []uint16, host string, workers int, timeout time.Duration) <-chan string {
 
 	requests := make(chan string, workers)
 	results := make(chan string)
@@ -18,7 +18,7 @@ func Scan(minPort uint16, maxPort uint16, host string, workers int, timeout time
 	}
 
 	go func() {
-		for i := minPort; i <= maxPort; i++ {
+		for i, _ := range ports {
 			address := fmt.Sprintf("%s:%d", host, i)
 			requests <- address
 		}
