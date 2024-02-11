@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	host     string
+	targets  []string
 	minPort  uint16
 	maxPort  uint16
 	workers  int
@@ -27,7 +27,14 @@ var scanCmd = &cobra.Command{
 }
 
 func scan(cmd *cobra.Command, args []string) error {
-	results := scanners.Scan(minPort, maxPort, host, workers, time.Second*time.Duration(timeout))
+	lo.ForEach(targets, func(target string, _ int) {
+		scanOne(target)
+	})
+	return nil
+}
+
+func scanOne(target string) error {
+	results := scanners.Scan(minPort, maxPort, target, workers, time.Second*time.Duration(timeout))
 	var bar *progressbar.ProgressBar
 	if progress {
 		bar = progressbar.Default(int64(maxPort - minPort + 1))
@@ -49,14 +56,14 @@ func scan(cmd *cobra.Command, args []string) error {
 		return ports[i] < ports[j]
 	})
 	lo.ForEach(ports, func(port uint16, _ int) {
-		fmt.Printf("%s:%d\n", host, port)
+		fmt.Printf("%s:%d\n", target, port)
 	})
 	return nil
 }
 
 func init() {
 	rootCmd.AddCommand(scanCmd)
-	scanCmd.Flags().StringVar(&host, "host", "", "Host to scan")
+	scanCmd.Flags().StringSliceVarP(&targets, "target", "t", nil, "Target host to scan")
 	scanCmd.MarkFlagRequired("host")
 	scanCmd.Flags().Uint16Var(&minPort, "min-port", 1, "starting port")
 	scanCmd.Flags().Uint16Var(&maxPort, "max-port", 1024, "ending port")
