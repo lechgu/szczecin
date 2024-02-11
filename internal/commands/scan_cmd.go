@@ -39,24 +39,24 @@ func scanOne(target string) error {
 	if progress {
 		bar = progressbar.Default(int64(maxPort - minPort + 1))
 	}
-	var ports []uint16
+	var opened []string
 	i := 0
-	for port := range results {
+	for result := range results {
 
-		ports = append(ports, port)
+		opened = append(opened, result)
 		i++
 		if progress {
 			_ = bar.Add(1)
 		}
 	}
-	ports = lo.Filter(ports, func(item uint16, _ int) bool {
-		return item != 0
+	opened = lo.Filter(opened, func(item string, _ int) bool {
+		return item != ""
 	})
-	sort.Slice(ports, func(i, j int) bool {
-		return ports[i] < ports[j]
+	sort.Slice(opened, func(i, j int) bool {
+		return opened[i] < opened[j]
 	})
-	lo.ForEach(ports, func(port uint16, _ int) {
-		fmt.Printf("%s:%d\n", target, port)
+	lo.ForEach(opened, func(result string, _ int) {
+		fmt.Println(result)
 	})
 	return nil
 }

@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-func Scan(minPort uint16, maxPort uint16, host string, workers int, timeout time.Duration) <-chan uint16 {
+func Scan(minPort uint16, maxPort uint16, host string, workers int, timeout time.Duration) <-chan string {
 
 	requests := make(chan uint16, workers)
-	results := make(chan uint16)
+	results := make(chan string)
 	var wg sync.WaitGroup
 
 	for i := 0; i < workers; i++ {
