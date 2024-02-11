@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/lechgu/szczecin/internal/portformat"
 	"github.com/lechgu/szczecin/internal/scanners"
 	"github.com/samber/lo"
 	"github.com/schollz/progressbar/v3"
@@ -12,12 +13,11 @@ import (
 )
 
 var (
-	targets  []string
-	minPort  uint16
-	maxPort  uint16
-	workers  int
-	timeout  int
-	progress bool
+	targets   []string
+	portQuery string
+	workers   int
+	timeout   int
+	progress  bool
 )
 
 var scanCmd = &cobra.Command{
@@ -27,10 +27,10 @@ var scanCmd = &cobra.Command{
 }
 
 func scan(cmd *cobra.Command, args []string) error {
-	var ports []uint16
 
-	for port := minPort; port <= maxPort; port++ {
-		ports = append(ports, port)
+	ports, err := portformat.Parse(portQuery)
+	if err != nil {
+		return err
 	}
 
 	results := scanners.Scan(targets, ports, workers, time.Second*time.Duration(timeout))
@@ -48,6 +48,7 @@ func scan(cmd *cobra.Command, args []string) error {
 			_ = bar.Add(1)
 		}
 	}
+	opened = lo.Uniq(opened)
 	opened = lo.Filter(opened, func(item string, _ int) bool {
 		return item != ""
 	})
@@ -63,10 +64,10 @@ func scan(cmd *cobra.Command, args []string) error {
 func init() {
 	rootCmd.AddCommand(scanCmd)
 	scanCmd.Flags().StringSliceVarP(&targets, "target", "t", nil, "Target host to scan")
-	scanCmd.MarkFlagRequired("host")
-	scanCmd.Flags().Uint16Var(&minPort, "min-port", 1, "starting port")
-	scanCmd.Flags().Uint16Var(&maxPort, "max-port", 1024, "ending port")
-	scanCmd.Flags().IntVar(&workers, "workers", 16, "Numbers of concurrent workers")
+	scanCmd.MarkFlagRequired("target")
+	scanCmd.Flags().StringVarP(&portQuery, "ports", "p", "", "Ports to scan")
+	scanCmd.MarkFlagRequired("ports")
+	scanCmd.Flags().IntVar(&workers, "workers", 16, "Number of concurrent workers")
 	scanCmd.Flags().IntVar(&timeout, "timeout", 10, "Connection timeout, in seconds")
 	scanCmd.Flags().BoolVar(&progress, "progress", false, "Show progress")
 }
