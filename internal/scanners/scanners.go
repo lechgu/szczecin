@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/samber/lo"
 )
 
-func Scan(ports []uint16, host string, workers int, timeout time.Duration) <-chan string {
+func Scan(targets []string, ports []uint16, workers int, timeout time.Duration) <-chan string {
 
 	requests := make(chan string, workers)
 	results := make(chan string)
@@ -18,10 +20,12 @@ func Scan(ports []uint16, host string, workers int, timeout time.Duration) <-cha
 	}
 
 	go func() {
-		for i, _ := range ports {
-			address := fmt.Sprintf("%s:%d", host, i)
-			requests <- address
-		}
+		lo.ForEach(targets, func(target string, _ int) {
+			lo.ForEach(ports, func(port uint16, _ int) {
+				address := fmt.Sprintf("%s:%d", target, port)
+				requests <- address
+			})
+		})
 		close(requests)
 		wg.Wait()
 		close(results)

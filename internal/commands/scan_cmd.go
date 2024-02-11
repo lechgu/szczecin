@@ -27,23 +27,16 @@ var scanCmd = &cobra.Command{
 }
 
 func scan(cmd *cobra.Command, args []string) error {
-	lo.ForEach(targets, func(target string, _ int) {
-		scanOne(target)
-	})
-	return nil
-}
-
-func scanOne(target string) error {
 	var ports []uint16
 
 	for port := minPort; port <= maxPort; port++ {
 		ports = append(ports, port)
 	}
 
-	results := scanners.Scan(ports, target, workers, time.Second*time.Duration(timeout))
+	results := scanners.Scan(targets, ports, workers, time.Second*time.Duration(timeout))
 	var bar *progressbar.ProgressBar
 	if progress {
-		bar = progressbar.Default(int64(maxPort - minPort + 1))
+		bar = progressbar.Default(int64(len(targets) * len(ports)))
 	}
 	var opened []string
 	i := 0
