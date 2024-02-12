@@ -50,9 +50,7 @@ func scan(cmd *cobra.Command, args []string) error {
 		}
 	}
 	opened = lo.Uniq(opened)
-	opened = lo.Filter(opened, func(item string, _ int) bool {
-		return item != ""
-	})
+
 	sort.Slice(opened, func(i, j int) bool {
 		return opened[i] < opened[j]
 	})
