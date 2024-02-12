@@ -41,8 +41,9 @@ func scan(cmd *cobra.Command, args []string) error {
 	var opened []string
 	i := 0
 	for result := range results {
-
-		opened = append(opened, result)
+		if result != "" {
+			opened = append(opened, result)
+		}
 		i++
 		if progress {
 			_ = bar.Add(1)
