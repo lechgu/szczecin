@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - "v*" # Trigger on version tags like v24.04.0
+      - "v*" # Trigger only on tags like v24.04.0
 
 env:
-  BIN_NAME: szczecin
-  GO_VERSION: "1.21.7"
+  BIN_NAME: szczecin # 🔧 Change this to your binary name
+  GO_VERSION: "1.21.7" # 🔧 Change Go version as needed
 
 jobs:
   release:
@@ -54,9 +54,31 @@ jobs:
             tar -czf "out/$ARCHIVE_NAME.tar.gz" "$BIN"
           fi
 
-      - name: Upload archives to GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           files: out/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename GitHub Release (strip 'v' from name)
+        if: startsWith(github.ref_name, 'v')
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const version = tag.startsWith('v') ? tag.slice(1) : tag;
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag
+            });
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              name: version
+            });
