@@ -24,28 +24,38 @@ jobs:
         with:
           go-version: "1.21.7"
 
-      - name: Build binary
+      - name: Build and package binary
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist
 
           EXT=""
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
             EXT=".exe"
           fi
 
-          BIN_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}$EXT"
-          echo "Building $BIN_NAME..."
+          BIN_NAME="szczecin$EXT"
+          BIN_DIR="build/${{ matrix.goos }}/amd64"
+          ARCHIVE_DIR="dist/${{ matrix.goos }}/amd64"
 
+          mkdir -p "$BIN_DIR" "$ARCHIVE_DIR"
+
+          echo "Building $BIN_NAME for ${{ matrix.goos }}/amd64..."
           env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w" -o "dist/$BIN_NAME" .
+            go build -ldflags="-s -w" -o "$BIN_DIR/$BIN_NAME" .
 
-          echo "Build completed: dist/$BIN_NAME"
+          echo "Packaging $BIN_NAME..."
 
-      - name: Upload binaries to GitHub release
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            zip -j "$ARCHIVE_DIR/szczecin.zip" "$BIN_DIR/$BIN_NAME"
+          else
+            tar -czf "$ARCHIVE_DIR/szczecin.tar.gz" -C "$BIN_DIR" "$BIN_NAME"
+          fi
+
+      - name: Upload archives to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*
+          files: |
+            dist/**/szczecin.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
