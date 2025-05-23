@@ -45,6 +45,8 @@ jobs:
           env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
             go build -ldflags="-s -w" -o "dist/$BIN_NAME" .
 
+          chmod +x "dist/$BIN_NAME"
+
           echo "Build completed: dist/$BIN_NAME"
 
       - name: Upload binaries to GitHub release
