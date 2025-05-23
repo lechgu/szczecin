@@ -1,36 +1,9 @@
-name: Release Go Binaries
-
-on:
-  push:
-    tags:
-      - "v*" # Trigger on version tags like v1.0.0
-
-jobs:
-  release:
-    name: Build and Release Binaries
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        goos: [linux, windows, darwin]
-        goarch: [amd64]
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.21.7" # Adjust as needed
-
-      - name: Build binary
-        run: |
-          mkdir -p build
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/myapp-${{ matrix.goos }}-${{ matrix.goarch }} .
-
-      - name: Upload binaries to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: build/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+- name: Build binary
+  run: |
+    mkdir -p dist
+    EXT=""
+    if [ "${{ matrix.goos }}" = "windows" ]; then
+      EXT=".exe"
+    fi
+    BIN_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}$EXT"
+    CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o dist/$BIN_NAME .
