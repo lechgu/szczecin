@@ -63,10 +63,12 @@ jobs:
 
           echo "Packaged: $ARCHIVE_PATH"
 
-      - name: Upload binaries to GitHub release
+      - name: Upload archives to GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
           name: ${{ steps.version.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
