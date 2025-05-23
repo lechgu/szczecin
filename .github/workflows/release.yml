@@ -3,7 +3,7 @@ name: Release Go Binaries
 on:
   push:
     tags:
-      - "v*" # Triggers on tags like v24.04.0
+      - "v*" # Trigger on version tags like v24.04.0
 
 jobs:
   release:
@@ -25,14 +25,23 @@ jobs:
           go-version: "1.21.7"
 
       - name: Build binary
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist
+
           EXT=""
-          if [ "${{ matrix.goos }}" = "windows" ]; then
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
             EXT=".exe"
           fi
+
           BIN_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}$EXT"
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o dist/$BIN_NAME .
+          echo "Building $BIN_NAME..."
+
+          env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-s -w" -o "dist/$BIN_NAME" .
+
+          echo "Build completed: dist/$BIN_NAME"
 
       - name: Upload binaries to GitHub release
         uses: softprops/action-gh-release@v1
