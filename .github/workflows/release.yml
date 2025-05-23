@@ -1,9 +1,13 @@
-name: Release Go Binaries
+name: Release
 
 on:
   push:
     tags:
       - "v*" # Trigger on version tags like v24.04.0
+
+env:
+  BIN_NAME: szczecin
+  GO_VERSION: "1.21.7"
 
 jobs:
   release:
@@ -22,7 +26,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.21.7"
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Build and archive binary
         shell: bash
@@ -34,20 +38,20 @@ jobs:
             EXT=".exe"
           fi
 
-          BIN_NAME="szczecin$EXT"
-          ARCHIVE_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}"
+          BIN="${BIN_NAME}${EXT}"
+          ARCHIVE_NAME="${BIN_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
           mkdir -p out
 
-          echo "Building $BIN_NAME for ${{ matrix.goos }}/${{ matrix.goarch }}..."
+          echo "Building $BIN for ${{ matrix.goos }}/${{ matrix.goarch }}..."
           env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w" -o "$BIN_NAME" .
+            go build -ldflags="-s -w" -o "$BIN" .
 
           echo "Packaging $ARCHIVE_NAME..."
 
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            zip "out/$ARCHIVE_NAME.zip" "$BIN_NAME"
+            zip "out/$ARCHIVE_NAME.zip" "$BIN"
           else
-            tar -czf "out/$ARCHIVE_NAME.tar.gz" "$BIN_NAME"
+            tar -czf "out/$ARCHIVE_NAME.tar.gz" "$BIN"
           fi
 
       - name: Upload archives to GitHub Release
