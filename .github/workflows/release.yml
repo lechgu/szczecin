@@ -3,11 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*" # Trigger only on tags like v24.04.0
-
-env:
-  BIN_NAME: szczecin           # 🔧 Change this to your binary name
-  GO_VERSION: "1.21.7"         # 🔧 Change Go version as needed
+      - "v*" # Trigger on version tags like v24.04.0
 
 jobs:
   release:
@@ -16,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, windows, darwin]
         goarch: [amd64]
 
     steps:
@@ -26,40 +22,53 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: "1.21.7"
 
-      - name: Build and archive binary
+      - name: Extract version without 'v'
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and package binary
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p dist
 
           EXT=""
+          ARCHIVE_EXT=""
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
             EXT=".exe"
-          fi
-
-          BIN="${BIN_NAME}${EXT}"
-          ARCHIVE_NAME="${BIN_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
-          mkdir -p out
-
-          echo "Building $BIN for ${{ matrix.goos }}/${{ matrix.goarch }}..."
-          env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w" -o "$BIN" .
-
-          echo "Packaging $ARCHIVE_NAME..."
-
-          if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            zip "out/$ARCHIVE_NAME.zip" "$BIN"
+            ARCHIVE_EXT="zip"
           else
-            tar -czf "out/$ARCHIVE_NAME.tar.gz" "$BIN"
+            ARCHIVE_EXT="tar.gz"
           fi
 
-      - name: Upload to GitHub Release
+          BIN_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}$EXT"
+          ARCHIVE_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}.${ARCHIVE_EXT}"
+          BUILD_PATH="dist/$BIN_NAME"
+          ARCHIVE_PATH="dist/$ARCHIVE_NAME"
+
+          echo "Building $BIN_NAME..."
+
+          env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-s -w" -o "$BUILD_PATH" .
+
+          # Ensure it's executable if Unix-based
+          if [[ "${{ matrix.goos }}" != "windows" ]]; then
+            chmod +x "$BUILD_PATH"
+            tar -czf "$ARCHIVE_PATH" -C dist "$BIN_NAME"
+          else
+            zip -j "$ARCHIVE_PATH" "$BUILD_PATH"
+          fi
+
+          echo "Packaged: $ARCHIVE_PATH"
+
+      - name: Upload archives to GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          # 👇 Strip the leading 'v' from the release name
-          name: ${{ github.ref_name.startsWith('v') && github.ref_name != 'v' && github.ref_name != '' ? github.ref_name.substring(1) : github.ref_name }}
-          files: out/*
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+          name: ${{ steps.version.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
