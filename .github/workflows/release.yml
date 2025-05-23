@@ -43,22 +43,24 @@ jobs:
             ARCHIVE_EXT="tar.gz"
           fi
 
-          BIN_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}$EXT"
-          ARCHIVE_NAME="szczecin-${{ matrix.goos }}-${{ matrix.goarch }}.${ARCHIVE_EXT}"
-          BUILD_PATH="dist/$BIN_NAME"
-          ARCHIVE_PATH="dist/$ARCHIVE_NAME"
+          BIN_NAME="szczecin$EXT"
+          PLATFORM_DIR="${{ matrix.goos }}/${{ matrix.goarch }}"
+          BUILD_DIR="build/$PLATFORM_DIR"
+          ARCHIVE_NAME="szczecin.${ARCHIVE_EXT}"
+          ARCHIVE_PATH="dist/$PLATFORM_DIR/$ARCHIVE_NAME"
+
+          mkdir -p "$BUILD_DIR" "dist/$PLATFORM_DIR"
 
           echo "Building $BIN_NAME..."
 
           env CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w" -o "$BUILD_PATH" .
+            go build -ldflags="-s -w" -o "$BUILD_DIR/$BIN_NAME" .
 
-          # Ensure it's executable if Unix-based
           if [[ "${{ matrix.goos }}" != "windows" ]]; then
-            chmod +x "$BUILD_PATH"
-            tar -czf "$ARCHIVE_PATH" -C dist "$BIN_NAME"
+            chmod +x "$BUILD_DIR/$BIN_NAME"
+            tar -czf "$ARCHIVE_PATH" -C build "$PLATFORM_DIR"
           else
-            zip -j "$ARCHIVE_PATH" "$BUILD_PATH"
+            (cd build && zip -r "../$ARCHIVE_PATH" "$PLATFORM_DIR")
           fi
 
           echo "Packaged: $ARCHIVE_PATH"
@@ -66,9 +68,7 @@ jobs:
       - name: Upload archives to GitHub release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            dist/*.tar.gz
-            dist/*.zip
+          files: dist/**/*.tar.gz
           name: ${{ steps.version.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
